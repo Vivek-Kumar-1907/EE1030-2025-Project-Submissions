@@ -1,0 +1,324 @@
+\let\negmedspace\undefined
+\let\negthickspace\undefined
+\documentclass[journal]{IEEEtran}
+\usepackage[a5paper, margin=10mm, onecolumn]{geometry}
+\usepackage{lmodern} 
+\usepackage{tfrupee} 
+\setlength{\headheight}{1cm}
+\setlength{\headsep}{0mm}   
+
+\usepackage{gvv-book}
+\usepackage{gvv}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{txfonts}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{gensymb}
+\usepackage{comment}
+\usepackage[breaklinks=true]{hyperref}
+\usepackage{tkz-euclide} 
+\usepackage{listings}                             
+\def\inputGnumericTable{}                                 
+\usepackage[latin1]{inputenc}                                
+\usepackage{color}                                            
+\usepackage{array}                                            
+\usepackage{longtable}                                       
+\usepackage{calc}                                             
+\usepackage{multirow}                                         
+\usepackage{hhline}                                           
+\usepackage{ifthen}                                           
+\usepackage{lscape}
+\usepackage{xparse}
+
+\bibliographystyle{IEEEtran}
+
+\title{Image Compression \\w/ Singular Value Decomposition}
+\author{EE25BTECH11062 - Vivek K Kumar}
+
+\begin{document}
+\maketitle
+
+\renewcommand{\thefigure}{\theenumi}
+\renewcommand{\thetable}{\theenumi}
+
+\numberwithin{equation}{enumi}
+\numberwithin{figure}{enumi} 
+
+\section{Summary of Strang's Video}\\
+If we take any $m\times n$ matrix $\vec{A}$,
+and take a look at its row space, and column space \brak{\text{which is of } R \text{ dimensions, where $R$ is the rank of the matrix}} we can get $R$ linearly independent vectors.
+
+We can orthogonalize the basis in the row space and also the column space by \\Gram-Schmidt orthogonalization. So now, we have $R$ orthogonal unit vectors $\vec{v_1}, \vec{v_2} \dots \vec{v_r}$. Then we can take $\vec{u_1}, \vec{u_2} \dots \vec{u_r}$ which are orthogonal unit vectors such that $\sigma\vec{u_i}$ = $\vec{A}\vec{v_i}$ for $i \in \cbrak{1, 2, 3, \dots r}$
+
+We can combine the $R$ equations above to make a matrix multiplication of the following form
+\begin{align}
+    \vec{A}\myvec{\vec{v_1} & \vec{v_2} \dots & \vec{v_r}} = \myvec{\sigma_1\vec{u_1} & \sigma_2\vec{u_2} \dots & \sigma_r\vec{u_r}}
+\end{align}
+
+Setting $\vec{V} = \myvec{\vec{v_1} & \vec{v_2} \dots & \vec{v_r}}$ and $\vec{U} = \myvec{\vec{u_1} & \vec{u_2} \dots & \vec{u_r}}$, and $\vec{\Sigma}$ is the diagonal rectangular matrix containing $\sigma_1, \sigma_2, \dots \sigma_r$
+
+\begin{align}
+    \vec{A}\vec{V} = \vec{U}\vec{\Sigma}
+\end{align}
+
+Since $\vec{U}, \vec{V}$ are orthogonal,
+Any $m\times n$ matrix $\vec{A}$ can be expressed as 
+\begin{align}
+    \vec{A} = \vec{U}\vec{\Sigma}\vec{V}^\top
+\end{align}
+This is called the singular value decomposition. Here, $\vec{U}$ and $\vec{V}^\top$ are matrices with left singular vectors and right singular vectors respectively, and $\vec{\Sigma}$ is a matrix with diagonal elements containing singular values.
+
+Now for computing the matrices,
+We take $\vec{A}^\top\vec{A}$ which is positive semi-definite and symmetric, and also $\vec{A}\vec{A}^\top$ with similar properties.
+
+\begin{align}
+    \vec{A}^\top\vec{A} &= \vec{V}\vec{\Sigma}^\top\vec{U}^\top\vec{U}\vec{\Sigma}\vec{V}^\top \\ 
+    & = \vec{V}\vec{\Sigma}^2\vec{V}^T\\
+    & = \vec{V}\vec{\Lambda}\vec{V}^T
+\end{align}
+
+which is basically the eigenvalue decomposition. We know that it exists because of the symmetric nature of the matrix.
+
+Similarly,
+\begin{align}
+    \vec{A}\vec{A}^\top &= \vec{U}\vec{\Sigma}\vec{V}^\top\vec{V}\vec{\Sigma}^\top\vec{U}^\top \\ 
+    & = \vec{U}\vec{\Sigma}^2\vec{U}^T\\
+    & = \vec{U}\vec{\Lambda}\vec{U}^T
+\end{align}
+
+So, by basically doing eigenvalue decomposition for $A^\top A$ and $AA^\top$ we get the 3 matrices. The singular values are obtained by taking the square root of the eigenvalues. 
+\begin{align}
+    \vec{\Lambda} = \vec{\Sigma}^2
+\end{align}
+
+It was also summarized in the video that the vectors in the null space of $\vec{A}$ and $\vec{A}^\top$, are $\myvec{\vec{v_r}, \vec{v_{r+1}}, \dots \vec{v_n}}$ and $\myvec{\vec{u_r}, \vec{u_{r+1}}, \dots \vec{u_m}}$ respectively. 
+\begin{align}
+    \vec{A}\vec{v_{r+1}} = 0 \\
+    \vec{A}\vec{v_{r+2}} = 0 \\
+    \dots \vec{A}\vec{v_{n}} = 0
+\end{align}
+
+\section{Math behind Image Compression}
+
+A grayscale image can be represented as a matrix of pixels, where each pixel can have integer values ranging from 0 to 255.
+
+The image sizes will be very large if we try to store the data of each and every pixel. Hence, we need to optimize the space each image takes. One way to do this is by approximating the matrix(usually full rank) with a smaller k rank matrix.
+
+\subsection{Eckart-Young Theorem}
+
+The Eckart-Young theorem states the following
+\begin{align}
+    \norm{\vec{A} - \vec{B}} \geq \norm{\vec{A} - \vec{A_k}}
+\end{align}
+Where, $\vec{B}$ is rank $k$ and $\norm{\vec{A} - \vec{B}}$ can be a
+\begin{itemize}
+    \item Frobenius norm
+    \item L2 norm
+    \item Nuclear norm
+\end{itemize}
+
+\begin{align}
+    \vec{A_k} = \sum_{i = 1}^k \sigma_i\vec{u_1}\vec{v_1}^\top\\
+    \sigma_1 > \sigma_2 > \sigma_3 \dots \sigma_k
+\end{align}
+
+Here, $\vec{u_i}, \vec{v_i}$ are left and right singular vectors.
+
+Hence, a good approximation can be obtained by performing a \textbf{truncated singular value decomposition}
+
+\subsection{Computing top K singular values}
+The top k singular values and vectors can be computed by computing the top $k$ highest eigenvalues \brak{\text{and its corresponding eigenvectors}} of $\vec{M} = \vec{A}^\top\vec{A}$. By doing this, we obtain 
+\begin{enumerate}
+    \item The top k singular values
+    \item Corresponding right orthonormal singular vectors
+\end{enumerate}
+
+Given a singular value and its corresponding right singular vector, the left singular vector can be easily computed by the following equation
+\begin{align}
+    \vec{A}\vec{v} = \sigma\vec{u} \text{ or}\\
+    \vec{u} = \frac{\vec{A}\vec{v}}{\norm{\vec{A}\vec{v}}}
+\end{align}
+
+We can hence obtain a rank-$k$ approximation of $\vec{A}$ by following the equation\\
+
+\begin{align}
+    \vec{A_k} = \sum_{i = 1}^k \sigma_i\vec{u_1}\vec{v_1}^\top\\
+    \sigma_1 > \sigma_2 > \sigma_3 \dots \sigma_k
+\end{align}
+
+The above representation is also referred to as truncated singular value decomposition.
+
+One of the ways to find the top k highest eigenvalues is by finding the highest eigenvalue, subtracting the SVD component corresponding to that eigenvalue from $\vec{A}$, and finding the highest eigenvalue again. This process is repeated again and again to finally find the top k eigenvalues of $\vec{A}^\top\vec{A}$. The following subsection explains how this can be done.
+
+\subsection{Power Iteration}
+
+Power iteration is implemented for finding the highest eigenvalue and its corresponding eigenvector for a given matrix $\vec{M}$.
+
+In this case we want to compute the eigenpair for $\vec{M}$ where, 
+\begin{align}
+    \vec{M} = \vec{A}^\top\vec{A} \\
+    \vec{M}\vec{v_1} = \lambda\vec{v_1}
+\end{align}
+
+\begin{align}
+    \vec{M}\vec{v_1} = \lambda\vec{v_1}
+\end{align}
+$\lambda$ is the highest eigenvalue
+
+The implementation of power iteration involves starting with a \textbf{random unit vector} $\vec{b_0}$, and finding $\vec{b_1} = \frac{\vec{M}\vec{b_0}}{\norm{\vec{M}\vec{b_0}}}$. We keep doing this, until $\vec{b_p}$ converges to $\vec{v_1}$\\
+$\vec{v_1}$ is the eigenvector corresponding to highest eigenvalue of $\vec{M}$
+
+This can be represented as
+\begin{align}
+    \norm{\vec{b_o}} = 1, \vec{b_o} \in \mathbb{R}^n \label{eq:1}\\
+    \vec{b_{p+1}} = \frac{\vec{M}\vec{b_p}}{\norm{\vec{M}\vec{b_p}}} \\
+    \vec{M} = \vec{A}^\top\vec{A}
+\end{align}
+The test for convergence was implemented by taking dot product 
+\begin{align}
+    \vec{b_{p+1}}^\top\vec{b_{p}} \approx 1
+\end{align}
+The final eigenvector can be represented as
+\begin{align}
+    \vec{v_1} = \vec{b_{p+1}}
+\end{align}
+The eigenvalue corresponding to this eigenvector is usually the highest ((((((TODO))))).\\
+We keep repeating this power iteration $k$ times.
+
+ We update $\vec{A}$ : $\vec{A} - \sigma\vec{u_1}\vec{v_1}^\top$, where $\vec{A}\vec{v_1} = \sigma_1\vec{u_1}$\\
+We then repeat the process from \ref{eq:1}
+
+Then, the rank $k$ approximation $\vec{A_k}$ can be computed by summing the previously obtained k singular values and vectors
+\begin{align}
+    \vec{A_k} = \sum_{i = 1}^k \sigma_i\vec{u_1}\vec{v_1}^\top\\
+    \sigma_1 > \sigma_2 > \sigma_3 \dots \sigma_k
+\end{align}
+
+\subsection{Pseudocode}
+\begin{lstlisting}
+FUNCTION FINDEIG(MATRIX A)
+	B = transpose(A)
+	C = multiply(B,A)
+	rand_vector = generate_random_vector()
+	current_vector = rand_vector/norm(rand_vector)
+	WHILE True
+		prev_vector = current_vector
+		current_vector = multiply(C,prev)
+		current_vector = current_vector/norm(rand_vector)
+		dot = dot_product(prev_vector, current_vector)
+		IF ABSOLUTE(dot) > 0.999999999 THEN 
+			return current_vector
+		ENDIF
+	ENDWHILE
+ENDFUNCTION
+
+FUNCTION SVD(MATRIX A, INT k)
+	B = A
+	FOR i = 1 to k
+		v = findEig(B)
+		u = multiply(A, v)
+		sigma = norm(u)
+		u = u/sigma
+		svd_one = sigma*multiply(u, transpose(v))
+		B = B - svd_one
+		RES += svd_one
+	ENDFOR
+	RETURN RES
+ENDFUNCTION
+
+A = INPUT_IMAGE_MATRIX()
+B = SVD(A, k)
+OUTPUT_IMAGE(B)
+\end{lstlisting}
+
+\section{Comparisons}
+The algorithm implemented is lightweight, short, easy to understand and implement. The reason this algorithm was chosen is to demonstrate the power of SVD without the implementation of more heavy \brak{\text{although more efficient}} algorithms.
+
+This algorithm could be improved further by using RSVD \brak{\text{Randomized SVD}}. Which involves taking a random matrix and performing a series of computations, until we can do the SVD on a smaller matrix. This can drastically improve the speed if coupled with the current algorithm.
+
+Other algorithms include:
+\begin{itemize}
+    \item \href{https://en.wikipedia.org/wiki/Singular_value_decomposition#One-sided_Jacobi_algorithm}{One-Sided Jacobi Method}
+    \item \href{https://en.wikipedia.org/wiki/Singular_value_decomposition#Two-sided_Jacobi_algorithm}{Two-Sided Jacobi Method}
+\end{itemize}
+
+\section{Results}
+
+\begin{figure}[H]
+   \centering
+  \includegraphics[width=0.64\columnwidth]{figs/einstein5.jpg}
+   \caption{Einstein 5}
+   \label{stemplot}
+\end{figure}
+
+\begin{figure}[H]
+   \centering
+  \includegraphics[width=0.64\columnwidth]{figs/einstein10.jpg}
+   \caption{Einstein 10}
+   \label{stemplot}
+\end{figure}
+
+
+\begin{figure}[H]
+   \centering
+  \includegraphics[width=0.64\columnwidth]{figs/einstein20.jpg}
+   \caption{Einstein 20}
+   \label{stemplot}
+\end{figure}
+
+\begin{figure}[H]
+   \centering
+  \includegraphics[width=0.64\columnwidth]{figs/einstein20.jpg}
+   \caption{Einstein 50}
+   \label{stemplot}
+\end{figure}
+
+\begin{figure}[H]
+   \centering
+  \includegraphics[width=0.64\columnwidth]{figs/einstein20.jpg}
+   \caption{Einstein 100}
+   \label{stemplot}
+\end{figure}
+
+
+\section{Error analysis}
+\begin{table}[H]    
+  \centering
+  \input{tables/einstein}
+  \caption{Results for einstein.jpg}
+  \label{tab:5.1}
+\end{table}
+\begin{table}[H]    
+  \centering
+  \input{tables/globe.tex}
+  \caption{Results for globe.jpg}
+  \label{tab:5.2}
+\end{table}
+\begin{table}[H]    
+  \centering
+  \input{tables/greyscale.tex}
+  \caption{Results for greyscale.jpg}
+  \label{tab:5.3}
+\end{table}
+
+\section{Trade-offs and reflections on implementation choice}
+
+The implemented algorithm is basic in nature. It is lightweight and easy to understand. It scales linearly according to $k$, and cubic according to $n$, where $n$ is image size for square image.
+Number of computations:- $O\brak{kn^3}$
+
+While the algorithm implemented is simple, and easy to understand, it clearly under-performs when it comes to efficiency and speed. Industry-standard algorithms process the image almost instantaneously.\\
+There were also a few flaws in the implementation:
+\begin{itemize}
+    \item \textbf{The rate limiting step is computing $\vec{A}^\top\vec{A}$}. This step alone takes $\approx$ 90\% of the time. Smarter methods need to be implemented.
+    \item \textbf{Lack of parallelism}. It performs the computations on the given matrix sequentially, instead of simultaneously.
+    \item \textbf{Errors due to random vector initialization.} The generated random vector might be orthogonal to the eigenvector with highest corresponding eigenvalue.
+    \item \textbf{Hardcoding limits for convergence}. The code limits the convergence check upto 2000 iterations. In some cases higher number of iterations are needed. Hence there is a big compromise on accuracy at the cost of efficiency.
+\end{itemize}
+
+\end{document}  
